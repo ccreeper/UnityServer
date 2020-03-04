@@ -1,7 +1,0 @@
-D:\程序\unity3d\UnityServer\Server\SimpleServer\SimpleServer\bin\Debug\SimpleServer.exe.config
-D:\程序\unity3d\UnityServer\Server\SimpleServer\SimpleServer\bin\Debug\SimpleServer.exe
-D:\程序\unity3d\UnityServer\Server\SimpleServer\SimpleServer\bin\Debug\SimpleServer.pdb
-D:\程序\unity3d\UnityServer\Server\SimpleServer\SimpleServer\obj\Debug\SimpleServer.csprojAssemblyReference.cache
-D:\程序\unity3d\UnityServer\Server\SimpleServer\SimpleServer\obj\Debug\SimpleServer.csproj.CoreCompileInputs.cache
-D:\程序\unity3d\UnityServer\Server\SimpleServer\SimpleServer\obj\Debug\SimpleServer.exe
-D:\程序\unity3d\UnityServer\Server\SimpleServer\SimpleServer\obj\Debug\SimpleServer.pdb
