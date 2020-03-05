@@ -1,15 +1,18 @@
-﻿using System;
+﻿using SimpleServer.Net;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Server
+namespace SimpleServer
 {
     class Program
     {
         static void Main(string[] args)
         {
+            ServerSocket.Instance.Init();
+            Console.ReadLine();
         }
     }
 }
