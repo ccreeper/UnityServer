@@ -16,6 +16,8 @@ namespace Server.Net
         public static string SECRET_KEY = "Ocean_Up&&NB!";
         //绑定的端口
         private const int DEFAULT_PORT = 8011;
+        //监听数量
+        private int DEFAULT_LISTEN_NUM = 50000;
 
 
 #if DEBUG
@@ -35,7 +37,7 @@ namespace Server.Net
             IPEndPoint ipEndPoint = new IPEndPoint(ip, DEFAULT_PORT);
             m_ListenSocket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
             m_ListenSocket.Bind(ipEndPoint);
-                asd 
+            m_ListenSocket.Listen(DEFAULT_LISTEN_NUM);
         }
     }
 }

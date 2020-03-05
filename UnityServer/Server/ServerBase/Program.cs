@@ -4,13 +4,12 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Server
+namespace ServerBase
 {
     class Program
     {
         static void Main(string[] args)
         {
-            Console.ReadLine();
         }
     }
 }
