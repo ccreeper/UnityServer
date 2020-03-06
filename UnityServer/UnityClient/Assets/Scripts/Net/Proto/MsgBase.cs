@@ -102,7 +102,7 @@ public class MsgBase
             using (var memory = new MemoryStream(newBytes, 0, newBytes.Length))
             {
                 Type t = System.Type.GetType(protocol.ToString());
-                return (MsgSecret)Serializer.NonGeneric.Deserialize(t, memory);
+                return (MsgBase)Serializer.NonGeneric.Deserialize(t, memory);
             }
 
         }
