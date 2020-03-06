@@ -64,19 +64,15 @@ public class MsgBase
     /// <returns></returns>
     public static byte[] Encode(MsgBase msgBase)
     {
+        string secret = string.IsNullOrEmpty(NetManager.Instance.SecretKey) ?
+            NetManager.Instance.PUBLICKEY : NetManager.Instance.SecretKey;
         using (var memory = new MemoryStream())
         {
             //将协议序列化
             Serializer.Serialize(memory, msgBase);
             byte[] bytes = memory.ToArray();
-
-            ////默认密钥加密
-            //string secret = ServerSocket.SERCET_KEY;
-            ////如果是请求密钥的协议，则用公钥加密
-            //if (msgBase is MsgSecret) {
-            //    secret = ServerSocket.PUBLIC_KEY;
-            //}
-            //bytes = AES.AESEncrypt(bytes, secret);
+           
+            bytes = AES.AESEncrypt(bytes, secret);
             return bytes;
         }
     }
@@ -99,11 +95,10 @@ public class MsgBase
         {
             byte[] newBytes = new byte[count];
             Array.Copy(bytes, offset, newBytes, 0, count);
-            //string secret = ServerSocket.SERCET_KEY;
-            //if (protocol == ProtocolEnum.MsgSecret) {
-            //    secret = ServerSocket.PUBLIC_KEY;
-            //}
-            //newBytes = AES.AESDecrypt(newBytes, secret);
+
+            string secret = string.IsNullOrEmpty(NetManager.Instance.SecretKey) ?
+                NetManager.Instance.PUBLICKEY : NetManager.Instance.SecretKey;
+            newBytes = AES.AESDecrypt(newBytes, secret);
             using (var memory = new MemoryStream(newBytes, 0, newBytes.Length))
             {
                 Type t = System.Type.GetType(protocol.ToString());
