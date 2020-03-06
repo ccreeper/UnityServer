@@ -1,4 +1,5 @@
 ﻿using SimpleServer.Net;
+using SimpleServer.Proto;
 using System;
 using System.Collections.Generic;
 using System.Linq;

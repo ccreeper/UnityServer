@@ -16,7 +16,7 @@ namespace SimpleServer.Proto
         public virtual ProtocolEnum ProtoType { get; set; }
 
 
-        //整个协议分为3部分，协议头：（  协议头长度-----》协议名称  ）-----》具体协议内容
+        //整个协议分为3部分， 协议头(整个协议长度)-----》协议名称(名称编码长度+名称编码)  -----》具体协议内容
         
         /// <summary>
         /// 协议头编码
@@ -24,7 +24,7 @@ namespace SimpleServer.Proto
         /// <param name="msgBase"></param>
         /// <returns></returns>
         public static byte[] EncodeName(MsgBase msgBase) {
-            byte[] nameBytes = System.Text.Encoding.UTF8.GetBytes(msgBase.ProtoType.ToString());
+            byte[] nameBytes = Encoding.UTF8.GetBytes(msgBase.ProtoType.ToString());
             Int16 len = (Int16)nameBytes.Length;
             //长度为len+2个字节存Int16的len
             byte[] bytes = new byte[2 + len];
@@ -50,8 +50,8 @@ namespace SimpleServer.Proto
             count = 2 + len;
             try
             {
-                string name = System.Text.Encoding.UTF8.GetString(bytes, offset + 2, len);
-                return(ProtocolEnum) System.Enum.Parse(typeof(ProtocolEnum), name);
+                string name = Encoding.UTF8.GetString(bytes, offset + 2, len);
+                return(ProtocolEnum) Enum.Parse(typeof(ProtocolEnum), name);
             }
             catch (Exception e)
             {

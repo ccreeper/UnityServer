@@ -57,6 +57,10 @@ namespace SimpleServer.Net
             ReadIndex = 0;
         }
 
+
+
+
+
         /// <summary>
         /// 扩充容量
         /// </summary>

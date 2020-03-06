@@ -1,9 +1,11 @@
 ﻿using ServerBase;
+using SimpleServer.Proto;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Net.Sockets;
+using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -176,9 +178,119 @@ namespace SimpleServer.Net
             readBuffer.CheckAndReads();
         }
 
+
+        /// <summary>
+        /// 接收数据处理
+        /// </summary>
+        /// <param name="client"></param>
         void OnReceiveData(ClientSocket client)
         {
-            
+            ByteArray readBuffer = client.ReadBuffer;
+
+            //判断数据长度
+            if (readBuffer.Length <= 4 || readBuffer.ReadIndex < 0)
+                return;
+            int readIndex = readBuffer.ReadIndex;
+            byte[] bytes = readBuffer.Bytes;
+            //readIndex开始的4个字节就是协议头，代表了整个协议的长度
+            int bodyLength = BitConverter.ToInt32(bytes, readIndex);
+            if (bodyLength + 4 > readBuffer.Length)
+            {
+                //协议头+协议长度 > 实际内容长度  ，表示信息不全，分包的情况，等待下次接收后拼接
+                //协议头+协议长度 < 实际内容长度  , 可能存在黏包
+                return;
+            }
+            //越过协议头移动到包体的位置
+            readBuffer.ReadIndex += 4;
+
+            //解析协议名
+            int nameCount = 0;
+            ProtocolEnum proto = ProtocolEnum.None;
+            try
+            {
+                proto = MsgBase.DecodeName(readBuffer.Bytes, readBuffer.ReadIndex, out nameCount);
+            }
+            catch (Exception e)
+            {
+                Debug.LogError("解析协议名出错" + e);
+                CloseClient(client);
+                return;
+            }
+
+            if (proto == ProtocolEnum.None) {
+                Debug.LogError("OnReceiveData 解析协议名失败");
+                CloseClient(client);
+                return;
+            }
+
+            readBuffer.ReadIndex += nameCount;
+            //解析协议体
+            int bodyCount = bodyLength - nameCount;
+            MsgBase msg = null;
+            try
+            {
+                msg = MsgBase.Decode(proto, readBuffer.Bytes, readBuffer.ReadIndex, bodyCount);
+                if (msg == null) {
+                    throw new Exception();
+                }
+            }
+            catch (Exception e)
+            {
+                Debug.LogError("{0}协议解析出错" + e, proto.ToString());
+                CloseClient(client);
+                return;
+            }
+            readBuffer.ReadIndex += bodyCount;
+
+            readBuffer.CheckAndReads();
+
+            //分发消息，通过反射调用对应的协议处理方法，所以最好保持方法与协议名一致
+            MethodInfo mi = typeof(MsgHandler).GetMethod(proto.ToString());
+            object[] obj = { client, msg };
+            if (mi != null)
+            {
+                mi.Invoke(null, obj);
+            }
+            else {
+                Debug.LogError("{0}协议未找到相应的方法..."+proto.ToString());
+            }
+
+
+            //继续读取,length>4表示还未读取完，黏包的情况
+            if (readBuffer.Length > 4) {
+                OnReceiveData(client);
+            }
+
+        }
+
+        public static void Send(ClientSocket socket ,MsgBase msg) {
+            if (socket == null || !socket.Socket.Connected)
+                return;
+            try
+            {
+                //生成发送的完整协议：协议头+协议名称+协议内容
+                byte[] nameBytes = MsgBase.EncodeName(msg);
+                byte[] bodyBytes = MsgBase.Encode(msg);
+                int len = nameBytes.Length + bodyBytes.Length;
+                byte[] headBytes = BitConverter.GetBytes(len);
+                byte[] sendBytes = new byte[headBytes.Length + len];
+                Array.Copy(headBytes, 0, sendBytes, 0, headBytes.Length);
+                Array.Copy(nameBytes, 0, sendBytes, headBytes.Length, nameBytes.Length);
+                Array.Copy(bodyBytes, 0, sendBytes, headBytes.Length + nameBytes.Length, bodyBytes.Length);
+                try
+                {
+                    socket.Socket.BeginSend(sendBytes, 0, sendBytes.Length, 0, null, null);
+                }
+                catch (SocketException e)
+                {
+                    Debug.LogError("Socket BeginSend Error:" + e);
+                }
+
+            }
+            catch (SocketException e)
+            {
+                Debug.LogError("Socket发送数据出错..." + e);
+            }
         }
 
         private void CloseClient(ClientSocket client)

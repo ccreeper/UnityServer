@@ -55,6 +55,7 @@
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Proto\MsgBase.cs" />
     <Compile Include="Proto\ProtocolEnum.cs" />
+    <Compile Include="Proto\SysMsg.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config" />
