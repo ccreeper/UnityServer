@@ -50,6 +50,7 @@
   <ItemGroup>
     <Compile Include="Net\ByteArray.cs" />
     <Compile Include="Net\ClientSocket.cs" />
+    <Compile Include="Net\MsgHandler.cs" />
     <Compile Include="Net\ServerSocket.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
