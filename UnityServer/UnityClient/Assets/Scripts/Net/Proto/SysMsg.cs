@@ -34,3 +34,25 @@ public class MsgPingHeart : MsgBase
     public override ProtocolEnum ProtoType { get; set; }
 
 }
+
+[ProtoContract]
+public class MsgTest : MsgBase
+{
+    public MsgTest()
+    {
+        ProtoType = ProtocolEnum.MsgTest;
+    }
+
+    //序列化
+    [ProtoMember(1)]
+    public override ProtocolEnum ProtoType { get; set; }
+
+
+    [ProtoMember(2)]
+    public string ReqContent { get; set; }
+
+
+    [ProtoMember(3)]
+    public string RecContent { get; set; }
+
+}

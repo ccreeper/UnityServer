@@ -57,8 +57,6 @@ namespace SimpleServer.Net
 
             while (true)
             {
-
-
                 ResetCheckRead();
                 try
                 {
@@ -80,7 +78,7 @@ namespace SimpleServer.Net
                     }
                     else
                     {
-                        //接收到客户端发送的消息
+                        //接收到客户端发送的消息,分包可能一次读不完
                         ReadClient(s);
                     }
                 }
@@ -154,8 +152,9 @@ namespace SimpleServer.Net
 
                 //剩余空间依然不足，表示数据长度过大，扩容
                 while (readBuffer.Remain <= 0) {
-                    int expandSize = readBuffer.Length < ByteArray.DEFAULT_SIZE ? ByteArray.DEFAULT_SIZE : readBuffer.Length;
-                    readBuffer.Resize(expandSize);
+                    int expandSize = readBuffer.Length < ByteArray.DEFAULT_SIZE ?
+                        ByteArray.DEFAULT_SIZE : readBuffer.Length;
+                    readBuffer.Resize(expandSize * 2);
                 }
             }
             try

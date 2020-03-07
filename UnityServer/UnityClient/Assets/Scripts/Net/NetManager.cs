@@ -51,6 +51,8 @@ public class NetManager : Singleton<NetManager>
     static long lastPongTime;
     //最后一次发送心跳包的时间
     static long lastPingTime;
+    //心跳包时间间隔
+    public static long m_PingInterval = 30;
 
 
     void InitState()
@@ -151,8 +153,13 @@ public class NetManager : Singleton<NetManager>
             //设置后台可运行
             m_MsgThread.IsBackground = true;
             m_MsgThread.Start();
-
             m_IsConnecting = false;
+
+            //心跳包线程
+            m_HeartThread = new Thread(PingThread);
+            m_HeartThread.IsBackground = true;
+            m_HeartThread.Start();
+
             //连接成功后请求密钥
             ProtocolMrg.SecretRequest();
             Debug.Log("Socket Connect Success");
@@ -163,6 +170,25 @@ public class NetManager : Singleton<NetManager>
         {
             Debug.LogError("Socket Connect Fail:" + e.ToString());
             m_IsConnecting = false;
+        }
+    }
+
+    /// <summary>
+    /// 心跳包发送线程
+    /// </summary>
+    void PingThread() {
+        while (m_Socket != null && m_Socket.Connected) {
+            long timeNow = GetTimeStamp();
+            if (timeNow - lastPingTime > m_PingInterval) {
+                MsgPingHeart msgPing = new MsgPingHeart();
+                SendMessage(msgPing);
+                lastPingTime = GetTimeStamp();
+            }
+
+            //心跳包过长没有回复，可能故障，非正常退出
+            if (timeNow - lastPongTime > m_PingInterval * 4) {
+                Close(false);
+            }
         }
     }
 
@@ -194,7 +220,7 @@ public class NetManager : Singleton<NetManager>
     /// 发送数据到服务器
     /// </summary>
     /// <param name="msg"></param>
-    public void SendMsg(MsgBase msg) {
+    public void SendMessage(MsgBase msg) {
         if (m_Socket == null || !m_Socket.Connected)
             return;
         if (m_IsConnecting) {
@@ -299,6 +325,7 @@ public class NetManager : Singleton<NetManager>
                     if (msgBase is MsgPingHeart)
                     {
                         lastPongTime = GetTimeStamp();
+                        Debug.Log("接受到心跳包...当前时间  "+DateTime.Now);
                         m_MsgCount--;
                     }
                     else {

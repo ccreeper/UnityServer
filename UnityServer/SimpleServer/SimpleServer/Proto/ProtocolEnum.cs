@@ -14,5 +14,6 @@ namespace SimpleServer.Proto
         //心跳包协议
         MsgPingHeart = 2,
 
+        MsgTest=9999,
     }
 }

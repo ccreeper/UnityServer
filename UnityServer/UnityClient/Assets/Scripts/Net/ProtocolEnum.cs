@@ -6,4 +6,7 @@
     //心跳包协议
     MsgPingHeart = 2,
 
+
+    //测试
+    MsgTest = 9999,
 }
