@@ -12,7 +12,7 @@ namespace SimpleServer
     {
         static void Main(string[] args)
         {
-            ServerSocket.Instance.Init();
+            ServerSocket.Instance.Init(); 
             Console.ReadLine();
         }
     }

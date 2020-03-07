@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 using System.Net.Sockets;
 using System.Threading;
 using UnityEngine;
@@ -31,8 +32,14 @@ public class NetManager : Singleton<NetManager>
     public delegate void EventListener(string str);
     private Dictionary<NetEvent, EventListener> m_ListenerDic = new Dictionary<NetEvent, EventListener>();
 
+    public delegate void ProtoListener(MsgBase msgBase);
+    private Dictionary<ProtocolEnum, ProtoListener> m_ProtoDic = new Dictionary<ProtocolEnum, ProtoListener>();
+
     private List<MsgBase> m_MsgList;
     private List<MsgBase> m_UnityMsgList;
+
+    //发送消息队列
+    private Queue<ByteArray> m_WriteQueue;
 
     //未处理消息的数量
     private int m_MsgCount = 0;
@@ -45,12 +52,14 @@ public class NetManager : Singleton<NetManager>
     //最后一次发送心跳包的时间
     static long lastPingTime;
 
+
     void InitState()
     {
         m_Socket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
         m_MsgList = new List<MsgBase>();
         m_UnityMsgList = new List<MsgBase>();
         m_ReadBuffer = new ByteArray();
+        m_WriteQueue = new Queue<ByteArray>();
         m_MsgCount = 0;
         lastPongTime = GetTimeStamp();
         lastPingTime = GetTimeStamp();
@@ -66,6 +75,22 @@ public class NetManager : Singleton<NetManager>
         }
         else {
             m_ListenerDic[netEvent] = listener;
+        }
+    }
+
+    /// <summary>
+    /// 协议监听
+    /// </summary>
+    /// <param name="protocolEnum"></param>
+    /// <param name="listener"></param>
+    public void AddProtoListener(ProtocolEnum protocolEnum, ProtoListener listener) {
+        //一个协议对应唯一一个监听
+        m_ProtoDic[protocolEnum] = listener;
+    }
+
+    public void InvokeProtoListener(ProtocolEnum proto,MsgBase msg) {
+        if (m_ProtoDic.ContainsKey(proto)) {
+            m_ProtoDic[proto].Invoke(msg);
         }
     }
 
@@ -102,7 +127,7 @@ public class NetManager : Singleton<NetManager>
         InitState();
         m_Socket.NoDelay = true;
         m_IsConnecting = true;
-        m_Socket.BeginConnect(ip, port,ConnectCallback,this);
+        m_Socket.BeginConnect(ip, port,ConnectCallback,m_Socket);
         m_Ip = ip;
         m_Port = port;
 
@@ -128,9 +153,11 @@ public class NetManager : Singleton<NetManager>
             m_MsgThread.Start();
 
             m_IsConnecting = false;
+            //连接成功后请求密钥
+            ProtocolMrg.SecretRequest();
             Debug.Log("Socket Connect Success");
 
-            m_Socket.BeginReceive(m_ReadBuffer.Bytes, m_ReadBuffer.WriteIndex, m_ReadBuffer.Remain, 0,ReceiveCallback,this);
+            m_Socket.BeginReceive(m_ReadBuffer.Bytes, m_ReadBuffer.WriteIndex, m_ReadBuffer.Remain, 0,ReceiveCallback,m_Socket);
         }
         catch (SocketException e)
         {
@@ -141,7 +168,7 @@ public class NetManager : Singleton<NetManager>
 
     //处理Unity游戏中的协议，由MonoBehaviour的Update中再调用
     public void Update() {
-        
+        MsgUpdate();
     }
 
     void MsgUpdate() {
@@ -149,8 +176,111 @@ public class NetManager : Singleton<NetManager>
         {
             if (m_MsgCount == 0)
                 return;
+            MsgBase msgBase = null;
+            lock (m_UnityMsgList) {
+                if (m_UnityMsgList.Count > 0) {
+                    msgBase = m_UnityMsgList[0];
+                    m_UnityMsgList.RemoveAt(0);
+                    m_MsgCount--;
+                }
+            }
+            if (msgBase != null) {
+                InvokeProtoListener(msgBase.ProtoType, msgBase);
+            }
+        }
+    }
 
+    /// <summary>
+    /// 发送数据到服务器
+    /// </summary>
+    /// <param name="msg"></param>
+    public void SendMsg(MsgBase msg) {
+        if (m_Socket == null || !m_Socket.Connected)
+            return;
+        if (m_IsConnecting) {
+            Debug.LogError("正在连接服务器，发送失败...");
+        }
+        if (m_IsClosing) {
+            Debug.LogError("正在关闭连接中，发送失败...");
+        }
+        try
+        {
+            byte[] nameBytes = MsgBase.EncodeName(msg);
+            byte[] bodyBytes = MsgBase.Encode(msg);
+            int len = nameBytes.Length + bodyBytes.Length;
+            byte[] headBytes = BitConverter.GetBytes(len);
+            byte[] sendBytes = new byte[len + headBytes.Length];
+            Array.Copy(headBytes, 0, sendBytes, 0, headBytes.Length);
+            Array.Copy(nameBytes, 0, sendBytes, headBytes.Length, nameBytes.Length);
+            Array.Copy(bodyBytes, 0, sendBytes, headBytes.Length+nameBytes.Length, bodyBytes.Length);
+            ByteArray byteArray = new ByteArray(sendBytes);
+            int count = 0;
+            lock (m_WriteQueue) {
+                m_WriteQueue.Enqueue(byteArray);
+                count = m_WriteQueue.Count;
+            }
 
+            //防止异步时同时进入，反复发送同一条数据
+            if (count == 1) {
+                m_Socket.BeginSend(sendBytes, 0, sendBytes.Length, 0, SendCallback, m_Socket);
+            }
+        }
+        catch (Exception e)
+        {
+            Debug.LogError("Send Message Error..."+e.ToString());
+            Close();
+
+        }
+    }
+
+    /// <summary>
+    /// 发送消息回调
+    /// </summary>
+    /// <param name="result"></param>
+    void SendCallback(IAsyncResult result) {
+        try
+        {
+            Socket socket = (Socket)result.AsyncState;
+            if (socket == null || !socket.Connected)
+                return;
+            int count = socket.EndSend(result);
+
+            //判断是否发送完整
+            ByteArray byteArray;
+            lock (m_WriteQueue) {
+                byteArray = m_WriteQueue.First();
+            }
+            byteArray.ReadIndex += count;
+
+            //发送完整
+            if (byteArray.Length == 0) {
+                lock (m_WriteQueue) {
+                    m_WriteQueue.Dequeue();
+                    if (m_WriteQueue.Count > 0)
+                    {
+                        byteArray = m_WriteQueue.First();
+                    }
+                    else {
+                        byteArray = null;
+                    }
+                }
+            }
+
+            //1. 发送不完整
+            //2. 发送完整，但存在第二条数据
+            if (byteArray != null)
+            {
+                socket.BeginSend(byteArray.Bytes, byteArray.ReadIndex, byteArray.Length, 0, SendCallback, socket);
+            }
+            //确保关闭连接前，先把消息发送完
+            else if (m_IsClosing) {
+                RealClose();
+            }
+        }
+        catch (Exception e)
+        {
+            Debug.LogError("SendCallback Error" + e.ToString());
+            Close();
         }
     }
 
@@ -209,7 +339,7 @@ public class NetManager : Singleton<NetManager>
                 m_ReadBuffer.Resize(m_ReadBuffer.Length *2);
             }
             //再次等待数据接收
-            socket.BeginReceive(m_ReadBuffer.Bytes, m_ReadBuffer.WriteIndex, m_ReadBuffer.Remain, 0, ReceiveCallback, this);
+            socket.BeginReceive(m_ReadBuffer.Bytes, m_ReadBuffer.WriteIndex, m_ReadBuffer.Remain, 0, ReceiveCallback, socket);
         }
         catch (SocketException e)
         {
@@ -285,9 +415,31 @@ public class NetManager : Singleton<NetManager>
     public void Close(bool normal = true) {
         if (m_Socket == null || m_IsConnecting)
             return;
+        if (m_WriteQueue.Count > 0)
+        {
+            m_IsClosing = true;
+        }
+        else
+        {
+            RealClose(normal);
+        }
+    }
+
+    void RealClose(bool normal = true) {
+
         SecretKey = "";
         m_Socket.Close();
         InvokeEvent(NetEvent.Close, normal.ToString());
+        if (m_HeartThread != null && m_HeartThread.IsAlive)
+        {
+            m_HeartThread.Abort();
+            m_HeartThread = null;
+        }
+        if (m_MsgThread != null && m_MsgThread.IsAlive)
+        {
+            m_MsgThread.Abort();
+            m_MsgThread = null;
+        }
         Debug.Log("Close Socket ");
     }
 

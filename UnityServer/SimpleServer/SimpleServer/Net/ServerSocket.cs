@@ -19,7 +19,7 @@ namespace SimpleServer.Net
         public static string SERCET_KEY = "Ocean_Up&&NB!";
 
         //端口
-        private const int DEFAULT_PORT = 8011;
+        private const int DEFAULT_PORT = 8888;
         //服务器socket
         private static Socket m_ListenSocket;
 
@@ -50,6 +50,8 @@ namespace SimpleServer.Net
             m_ListenSocket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
             //绑定监听端口
             m_ListenSocket.Bind(ipEndPoint);
+            //监听数量
+            m_ListenSocket.Listen(50000);
 
             Debug.LogInfo("服务器正在监听{0}端口...", m_ListenSocket.LocalEndPoint.ToString());
 
@@ -129,7 +131,7 @@ namespace SimpleServer.Net
 
                 m_ClientDic.Add(client, clientSocket);
 
-                Debug.Log("客户端{0}连接，当前在线{1}个客户端...", client.LocalEndPoint.ToString(), m_ClientDic.Count);
+                Debug.Log("客户端{0}连接，当前在线{1}个客户端...", client.RemoteEndPoint.ToString(), m_ClientDic.Count);
             }
             catch (SocketException e)
             {
@@ -231,7 +233,9 @@ namespace SimpleServer.Net
             {
                 msg = MsgBase.Decode(proto, readBuffer.Bytes, readBuffer.ReadIndex, bodyCount);
                 if (msg == null) {
-                    throw new Exception();
+                    Debug.LogError("协议解析出错...");
+                    CloseClient(client);
+                    return;
                 }
             }
             catch (Exception e)
@@ -295,9 +299,9 @@ namespace SimpleServer.Net
 
         private void CloseClient(ClientSocket client)
         {
-            client.Socket.Close();
             m_ClientDic.Remove(client.Socket);
-            Debug.Log("客户端{0}断开连接，当前在线数{1}...", client.Socket.LocalEndPoint.ToString(), m_ClientDic.Count);
+            Debug.Log("客户端{0}断开连接，当前在线数{1}...", client.Socket.RemoteEndPoint.ToString(), m_ClientDic.Count);
+            client.Socket.Close();
         }
 
         public static long GetTimeStamp()

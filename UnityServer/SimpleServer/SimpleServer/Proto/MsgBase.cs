@@ -2,11 +2,8 @@
 using ServerBase;
 using SimpleServer.Net;
 using System;
-using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 using System.Text;
-using System.Threading.Tasks;
 
 namespace SimpleServer.Proto
 {
@@ -106,6 +103,8 @@ namespace SimpleServer.Proto
                 }
                 newBytes = AES.AESDecrypt(newBytes, secret);
                 using (var memory = new MemoryStream(newBytes, 0, newBytes.Length)) {
+
+                    //注意协议类如果有命名空间，则要加上命名空间+protocal.ToString()才是完整的类名
                     Type t = System.Type.GetType(protocol.ToString());
                     return (MsgBase) Serializer.NonGeneric.Deserialize(t, memory);
                 }

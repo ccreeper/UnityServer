@@ -32,6 +32,15 @@ public class ByteArray
         WriteIndex = 0;
 
     }
+
+    public ByteArray(byte[] bytes)
+    {
+        this.Bytes = bytes;
+        this.capacity = bytes.Length;
+        this.m_InitSize = DEFAULT_SIZE;
+        this.ReadIndex = 0;
+        this.WriteIndex = bytes.Length;
+    }
     /// <summary>
     /// 检测并移动数据
     /// </summary>
