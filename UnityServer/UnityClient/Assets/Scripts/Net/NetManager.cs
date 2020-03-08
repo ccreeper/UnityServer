@@ -54,6 +54,12 @@ public class NetManager : Singleton<NetManager>
     //心跳包时间间隔
     public static long m_PingInterval = 30;
 
+    //掉线
+    private bool m_Disconnect = false;
+    //是否成功连接过
+    private bool m_HasConnected = false;
+    //此次连接是否是重连，一般用于重连的自动登录
+    private bool m_ReConnect = false;
 
     void InitState()
     {
@@ -147,7 +153,8 @@ public class NetManager : Singleton<NetManager>
             Socket socket = (Socket)result.AsyncState;
             socket.EndConnect(result);
             InvokeEvent(NetEvent.ConnectSucc,"");
-
+            
+            m_HasConnected = true;
             //连接成功后，创建线程处理协议
             m_MsgThread = new Thread(MsgThread);
             //设置后台可运行
@@ -194,7 +201,25 @@ public class NetManager : Singleton<NetManager>
 
     //处理Unity游戏中的协议，由MonoBehaviour的Update中再调用
     public void Update() {
+        //服务器是否连接过且当前断线
+        if (m_Disconnect && m_HasConnected) {
+            //弹框，确定是否重连
+            //重连
+            ReConnect();
+            //TODO:退出
+
+
+            m_Disconnect = false;
+        }
         MsgUpdate();
+    }
+
+    /// <summary>
+    /// 重新连接
+    /// </summary>
+    public void ReConnect() {
+        Connect(m_Ip, m_Port);
+        m_ReConnect = true;
     }
 
     void MsgUpdate() {
@@ -457,6 +482,7 @@ public class NetManager : Singleton<NetManager>
         SecretKey = "";
         m_Socket.Close();
         InvokeEvent(NetEvent.Close, normal.ToString());
+        m_Disconnect = true;
         if (m_HeartThread != null && m_HeartThread.IsAlive)
         {
             m_HeartThread.Abort();

@@ -15,7 +15,11 @@ public class GameStart : MonoBehaviour
     {
         NetManager.Instance.Update();
         if (Input.GetKeyDown(KeyCode.A)){
+            //黏包测试
             ProtocolMrg.SocketTest();
+            //ProtocolMrg.SocketTest();
+            //ProtocolMrg.SocketTest();
+            //ProtocolMrg.SocketTest();
         }
     }
 
