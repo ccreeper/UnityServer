@@ -1,5 +1,5 @@
 ﻿using ProtoBuf;
-
+using SimpleServer.Proto;
 
 /// <summary>
 /// 协议类名与协议名一致（建议）

@@ -13,7 +13,11 @@ namespace SimpleServer.Proto
         MsgSecret = 1,
         //心跳包协议
         MsgPingHeart = 2,
+        //注册
+        MsgRegister = 3,
+        //登陆
+        MsgLogin = 4,
 
-        MsgTest=9999,
+        MsgTest =9999,
     }
 }

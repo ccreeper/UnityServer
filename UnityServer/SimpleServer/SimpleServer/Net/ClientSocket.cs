@@ -17,5 +17,7 @@ namespace SimpleServer.Net
 
         public ByteArray ReadBuffer = new ByteArray();
 
+        public int UserId = 0;
+
     }
 }

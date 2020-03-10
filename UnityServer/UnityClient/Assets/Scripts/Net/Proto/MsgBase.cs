@@ -1,4 +1,5 @@
 ﻿using ProtoBuf;
+using SimpleServer.Proto;
 using System;
 using System.IO;
 using System.Text;
