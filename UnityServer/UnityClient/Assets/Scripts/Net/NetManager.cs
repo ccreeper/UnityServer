@@ -153,7 +153,7 @@ public class NetManager : Singleton<NetManager>
             Socket socket = (Socket)result.AsyncState;
             socket.EndConnect(result);
             InvokeEvent(NetEvent.ConnectSucc,"");
-            
+
             m_HasConnected = true;
             //连接成功后，创建线程处理协议
             m_MsgThread = new Thread(MsgThread);

@@ -1,4 +1,5 @@
-﻿using SimpleServer.Net;
+﻿using MySql;
+using SimpleServer.Net;
 using SimpleServer.Proto;
 using System;
 using System.Collections.Generic;
@@ -12,6 +13,7 @@ namespace SimpleServer
     {
         static void Main(string[] args)
         {
+            MySqlMgr.Instance.Init();
             ServerSocket.Instance.Init(); 
             Console.ReadLine();
         }
