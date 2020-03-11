@@ -1,4 +1,5 @@
-﻿using SimpleServer.Proto;
+﻿using SimpleServer.Business;
+using SimpleServer.Proto;
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -61,6 +62,26 @@ public class NetManager : Singleton<NetManager>
     private bool m_HasConnected = false;
     //此次连接是否是重连，一般用于重连的自动登录
     private bool m_ReConnect = false;
+
+    //当前网络
+    private NetworkReachability m_CurNetWork = NetworkReachability.NotReachable;
+
+    /// <summary>
+    /// 切换网络时，进行重连
+    /// </summary>
+    /// <returns></returns>
+    public IEnumerator CheckNet() {
+        m_CurNetWork = Application.internetReachability;
+        while (true) {
+            yield return new WaitForSeconds(1);
+            if (m_HasConnected) {
+                if (m_CurNetWork != Application.internetReachability) {
+                    ReConnect();
+                    m_CurNetWork = Application.internetReachability;
+                }
+            }
+        }
+    }
 
     void InitState()
     {
@@ -211,6 +232,22 @@ public class NetManager : Singleton<NetManager>
 
 
             m_Disconnect = false;
+        }
+
+        //断线后连接自动登录
+        if (!string.IsNullOrEmpty(SecretKey) && m_Socket.Connected && m_ReConnect) {
+            //利用token重连
+            //ProtocolMrg.Login(LoginType.Token, "username", "token", (res, token) =>
+            //{
+            //    if (res == LoginResult.Success) {
+                    
+
+            //    }
+            //    else {
+
+            //    }
+            //});
+            m_ReConnect = false;
         }
         MsgUpdate();
     }
